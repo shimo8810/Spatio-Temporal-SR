@@ -6,6 +6,7 @@
 Spatio-Temporal-SR/
     ├ experiments/
     ├ results/
+    ├ libs/
     ├ scripts/
     ├ datasets/
     ├ Pubs/ # Dropboxへのsymbolic link
@@ -18,6 +19,9 @@ Spatio-Temporal-SR/
 実験コードとかが入っている.
 - results
 experimentsの実験に対応した結果が入っている.
+- experiments
+共通で使うlib.
+
 - scripts
 共通のスクリプト, データセット生成とか
 - datasets
