@@ -27,7 +27,7 @@ FILE_PATH = path.dirname(path.abspath(__file__))
 # プロジェクトのルートパス
 ROOT_PATH = path.normpath(path.join(FILE_PATH, '../../'))
 # データディレクトリのパス
-# DS_PATH = path.join(ROOT_PATH, 'dataset', 'vae_dataset')
+DS_PATH = path.join(ROOT_PATH, 'datasets')
 
 def save_reconstructed_images(x, x1, filename):
     fig, ax = plt.subplots(1, 2, figsize=(18, 9), dpi=100)
@@ -36,6 +36,7 @@ def save_reconstructed_images(x, x1, filename):
         x = np.clip(x * 255, 0, 255).astype(np.uint8)
         ai.imshow(x)
     fig.savefig(filename)
+    plt.close()
 
 def save_sampled_images(x, filename):
     x = x.reshape(4, 4,3, 128, 128).transpose(0, 3, 1, 4, 2).reshape(4 * 128, 4 * 128, 3)
@@ -44,6 +45,7 @@ def save_sampled_images(x, filename):
     ax = fig.add_subplot(1, 1, 1)
     ax.imshow(x)
     fig.savefig(filename)
+    plt.close()
 
 def main():
     parser = argparse.ArgumentParser(description='Chainer example: VAE')
@@ -82,12 +84,14 @@ def main():
 
     optimizer = chainer.optimizers.Adam()
     optimizer.setup(model)
+    optimizer.add_hook(chainer.optimizer.GradientClipping(10.0))
+    optimizer.add_hook(chainer.optimizer.WeightDecay(0.0001))
 
     # Load the Idol dataset
-    img_paths = os.listdir('/media/shimo/HDD_storage/DataSet/COIL/coil-100')
+    img_paths = os.listdir(path.join(DS_PATH, 'coil-100'))
     dataset = D.ImageDataset(
         paths=img_paths,
-        root='/media/shimo/HDD_storage/DataSet/COIL/coil-100'
+        root=path.join(DS_PATH, 'coil-100')
     )
     test, train = chainer.datasets.split_dataset(dataset, 200)
 
