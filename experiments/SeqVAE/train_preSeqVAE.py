@@ -75,7 +75,7 @@ def main():
 
     out_path = RESULT_PATH.joinpath('preSeqVAE_latent{}_coef{}_ch{}'.format(args.dimz, args.coef, args.ch))
     print("# result dir : {}".format(out_path))
-    out_path.mkdir(exist_ok=True)
+    out_path.mkdir(parents=True, exist_ok=True)
 
     model = SeqVAE(128, args.dimz, args.ch)
 
@@ -142,6 +142,7 @@ def main():
     # Run the training
     trainer.run()
 
+    MODEL_PATH.mkdir(parents=True, exist_ok=True)
     chainer.serializers.save_npz(
         str(MODEL_PATH.joinpath('preSeqVAE_latent{}_coef{}_ch{}.npz'.format(args.dimz, args.coef, args.ch))), model)
 
