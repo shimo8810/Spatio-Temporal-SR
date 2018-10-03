@@ -104,11 +104,13 @@ def main():
     trainer.extend(extensions.snapshot(), trigger=(args.epoch, 'epoch'))
     trainer.extend(extensions.LogReport())
     trainer.extend(extensions.PrintReport(
-        ['epoch', 'main/loss', 'validation/main/loss',
-         'main/rec_loss', 'validation/main/rec_loss', 'main/kl_loss', 'validation/main/kl_loss', 'elapsed_time']))
+        ['epoch', 'main/rec_loss', 'validation/main/rec_loss',
+        'main/seq_loss', 'validation/main/seq_loss', 'main/kl_loss', 'validation/main/kl_loss', 'elapsed_time']))
 
     trainer.extend(extensions.PlotReport(['main/loss', 'validation/main/loss'],
                               'epoch', file_name='loss.png'))
+    trainer.extend(extensions.PlotReport(['main/seq_loss', 'validation/main/seq_loss'],
+                              'epoch', file_name='seq_loss.png'))
     trainer.extend(extensions.PlotReport(['main/loss', 'validation/main/rec_loss'],
                               'epoch', file_name='rec_loss.png'))
     trainer.extend(extensions.PlotReport(['main/kl_loss', 'validation/main/kl_loss'],
@@ -121,13 +123,13 @@ def main():
     #draw reconstructred image
     @chainer.training.make_extension(trigger=(10, 'epoch'))
     def reconstruct_and_sample(trainer):
-        x = model.xp.array(train[:16])
+        x = model.xp.array(train[:16])[:,0,:]
         with chainer.using_config('train', False), chainer.no_backprop_mode():
             x1 = model(x).data
         save_reconstructed_images(chainer.cuda.to_cpu(x), chainer.cuda.to_cpu(x1),
             out_path.joinpath('train_reconstructed_epoch_{}'.format(trainer.updater.epoch)))
 
-        x = model.xp.array(test[:16])
+        x = model.xp.array(test[:16])[:,0,:]
         with chainer.using_config('train', False), chainer.no_backprop_mode():
             x1 = model(x).data
         save_reconstructed_images(chainer.cuda.to_cpu(x), chainer.cuda.to_cpu(x1),
