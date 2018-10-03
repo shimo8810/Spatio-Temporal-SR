@@ -115,7 +115,40 @@ class SeqVAE(chainer.Chain):
             # kl-divergnece regularization
             self.kl_loss = F.gaussian_kl_divergence(mu, ln_var) / batch_size
             self.loss = self.rec_loss + C * self.kl_loss
-            chainer.report(
-                {'rec_loss': self.rec_loss, 'kl_loss':self.kl_loss, 'loss': self.loss}, observer=self)
+            chainer.report({'rec_loss': self.rec_loss,
+                'kl_loss':self.kl_loss, 'loss': self.loss}, observer=self)
+            return self.loss
+        return lf
+
+    def get_seq_loss_func(self, C1=1.0, C2=2.0, k=1):
+        def lf(x):
+            bachsize, numframe, _, _, _ = x.shape
+            x1 = x[:,0,:]
+            x2 = x[:,2,:]
+            mu1, ln_var1 = self.encode(x1)
+            mu2, ln_var2 = self.encode(x2)
+
+            # reconstruction loss
+            rec_loss = 0
+            seq_loss = 0
+            for l in range(k):
+                z1 = F.gaussian(mu1, ln_var1)
+                rec_loss += F.bernoulli_nll(x1, self.decode(z1, sig=False)) / (2 * k * bachsize)
+                z2 = F.gaussian(mu2, ln_var2)
+                rec_loss += F.bernoulli_nll(x2, self.decode(z1, sig=False)) / (2 * k * bachsize)
+
+                zc = (z1 + z2) / 2
+                seq_loss += F.bernoulli_nll(x[:,1,:], self.decode(zc, sig=False)) / (2 * k * bachsize)
+            self.rec_loss = rec_loss
+            self.seq_loss = seq_loss
+
+            # kl-divergnece regularization
+            self.kl_loss = F.gaussian_kl_divergence(mu1, ln_var1) / bachsize / 2.0
+            self.kl_loss += F.gaussian_kl_divergence(mu2, ln_var2) / bachsize / 2.0
+
+            # loss summation
+            self.loss = self.rec_loss + C1 * self.kl_loss + C2 * self.seq_loss
+            chainer.report({'rec_loss': self.rec_loss,
+                'kl_loss':self.kl_loss, 'seq_loss': self.seq_loss, 'loss': self.loss}, observer=self)
             return self.loss
         return lf
