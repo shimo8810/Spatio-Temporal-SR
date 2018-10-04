@@ -40,6 +40,26 @@ class ConvBNR(chainer.Chain):
             h = self.activation(h)
         return h
 
+class ResBlock(chainer.Chain):
+    def __init__(self, in_ch, mid_ch, activation=F.relu):
+        self.activation = activation
+        init_w = chainer.initializers.HeNormal()
+        super(ResBlock, self).__init__()
+
+        with self.init_scope():
+            self.conv1 = L.Convolution2D(in_ch, mid_ch, 1, 1, 0, initialW=init_w)
+            self.bn1 = L.BatchNormalization(mid_ch)
+            self.conv2 = L.Convolution2D(mid_ch, mid_ch, 3, 1, 1, initialW=init_w)
+            self.bn2 = L.BatchNormalization(mid_ch)
+            self.conv3 = L.Convolution2D(mid_ch, in_ch, 1, 1, 0, initialW=init_w)
+            self.bn3 = L.BatchNormalization(mid_ch)
+
+    def forward(self, x):
+        h = self.activation(self.bn1(self.conv1(x)))
+        h = self.activation(self.bn2(self.conv2(h)))
+        return self.activation(self.bn3(self.conv3(h)) + x)
+
+
 class SeqVAE(chainer.Chain):
     def __init__(self, size, n_latent, n_ch, activation=F.relu):
         self.n_ch = n_ch
