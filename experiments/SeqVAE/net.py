@@ -227,7 +227,6 @@ class SeqResVAE(chainer.Chain):
         h = self.dec_conv2(h)
         h = self.dec_conv3(h)
         h = self.dec_conv4(h)
-        h = self.dec_conv5(h)
         h = self.dec_res5(h)
         h = self.dec_res6(h)
         h = self.dec_res7(h)
