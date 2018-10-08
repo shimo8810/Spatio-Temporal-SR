@@ -1,3 +1,4 @@
+import random
 from pathlib import Path
 from tqdm import tqdm
 from PIL import Image
@@ -30,7 +31,8 @@ class COILDataset(dataset_mixin.DatasetMixin):
         return self.data[i]
 
 class SeqCOILDataset(dataset_mixin.DatasetMixin):
-    def __init__(self):
+    def __init__(self, data_aug=False):
+        self.data_aug = data_aug
         seq_coil_path = DATA_PATH.joinpath('seq-coil-100')
         data = []
         for obj_path in tqdm(seq_coil_path.iterdir()):
@@ -41,7 +43,31 @@ class SeqCOILDataset(dataset_mixin.DatasetMixin):
                 image = np.asarray(Image.open(image_path)).astype('f').transpose(2, 0, 1) / 255.0
                 seqs.append(image)
             data.append(seqs)
+
+        # 拡張データ
+        if data_aug:
+            aug_coil_path = DATA_PATH.joinpath('seq-coil-scale-100')
+            for obj_path in tqdm(aug_coil_path.iterdir()):
+                obj_name = obj_path.name
+                seqs = []
+                for i in range(72):
+                    image_path = obj_path.joinpath('{}__{}.png'.format(obj_name, i))
+                    image = np.asarray(Image.open(image_path)).astype('f').transpose(2, 0, 1) / 255.0
+                    seqs.append(image)
+                data.append(seqs)
+
+            aug_coil_path = DATA_PATH.joinpath('seq-coil-scale-100')
+            for obj_path in tqdm(aug_coil_path.iterdir()):
+                obj_name = obj_path.name
+                seqs = []
+                for i in range(72):
+                    image_path = obj_path.joinpath('{}__{}.png'.format(obj_name, i))
+                    image = np.asarray(Image.open(image_path)).astype('f').transpose(2, 0, 1) / 255.0
+                    seqs.append(image)
+                data.append(seqs)
+
         self.data = np.array(data)
+
         self.num_obj, self.num_frame, _, _, _ = self.data.shape
 
     def __len__(self):
@@ -52,10 +78,29 @@ class SeqCOILDataset(dataset_mixin.DatasetMixin):
         frame = i % self.num_frame
         frames = [frame, (frame + 1) % self.num_frame, (frame + 2) % self.num_frame]
 
-        return self.data[obj, frames,:]
+        seq = self.data[obj, frames,:]
+        if self.data_aug:
+            return self.data_transform(seq)
+        return seq
+
+    def data_transform(self, seq):
+        # flip h
+        if random.choice([True, False]):
+            seq = np.flip(seq, 2)
+
+        # flip v
+        if random.choice([True, False]):
+            seq = np.flip(seq, 3)
+
+        # rot 90
+        if random.choice([True, False]):
+            seq = np.rot90(seq, axes=(2, 3))
+
+        return seq
+
 
 if __name__ == '__main__':
-    dataset = SeqCOILDataset()
+    dataset = SeqCOILDataset(data_aug=True)
     print(len(dataset))
     print(dataset.get_example(71).shape)
     print(dataset.get_example(72).shape)
