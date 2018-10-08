@@ -59,7 +59,6 @@ class ResBlock(chainer.Chain):
         h = self.activation(self.bn2(self.conv2(h)))
         return self.activation(self.bn3(self.conv3(h)) + x)
 
-
 class SeqVAE(chainer.Chain):
     def __init__(self, size, n_latent, n_ch, activation=F.relu):
         self.n_ch = n_ch
