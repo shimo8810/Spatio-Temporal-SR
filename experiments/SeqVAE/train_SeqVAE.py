@@ -55,6 +55,8 @@ def main():
                         help='number of epochs to learn')
     parser.add_argument('--batchsize', '-b', type=int, default=128,
                         help='learning minibatch size')
+    parser.add_argument('--aug', '-a', action='store_true', default=False,
+                        help='data aug.')
     # Hyper Parameter
     parser.add_argument('--dimz', '-z', default=200, type=int,
                         help='dimention of encoded vector')
@@ -87,7 +89,7 @@ def main():
     optimizer.add_hook(chainer.optimizer.WeightDecay(0.0001))
 
     # Load the Idol dataset
-    dataset = SeqCOILDataset()
+    dataset = SeqCOILDataset(data_aug=args.aug)
     test, train = chainer.datasets.split_dataset(dataset, 200)
 
     train_iter = chainer.iterators.SerialIterator(train, args.batchsize)
