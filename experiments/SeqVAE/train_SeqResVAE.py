@@ -119,6 +119,9 @@ def main():
                               'epoch', file_name='kl_loss.png'))
     trainer.extend(extensions.ProgressBar())
 
+    trainer.extend(extensions.ExponentialShift("alpha", 0.1), trigger=(100, 'epoch'))
+
+
     if args.resume:
         chainer.serializers.load_npz(args.resume, trainer)
 
