@@ -98,13 +98,13 @@ class SeqVAE(chainer.Chain):
         h = self.enc_conv2(h)
         h = self.enc_conv3(h)
         h = self.enc_conv4(h)
-        h = self.enc_fc5(h)
+        h = F.tanh(self.enc_fc5(h))
         mu = self.enc_fc6_mu(h)
         ln_var = self.enc_fc6_ln_var(h)
         return mu, ln_var
 
     def decode(self, z, sig=True):
-        h = self.dec_fc0(z)
+        h = F.tanh(self.dec_fc0(z))
         h = F.reshape(h, (z.shape[0], self.z_ch, self.z_size, self.z_size))
         h = self.dec_conv1(h)
         h = self.dec_conv2(h)
@@ -214,13 +214,13 @@ class SeqResVAE(chainer.Chain):
         h = self.enc_conv2(h)
         h = self.enc_conv3(h)
         h = self.enc_conv4(h)
-        h = self.enc_fc5(h)
+        h = F.tanh(self.enc_fc5(h))
         mu = self.enc_fc6_mu(h)
         ln_var = self.enc_fc6_ln_var(h)
         return mu, ln_var
 
     def decode(self, z, sig=True):
-        h = self.dec_fc0(z)
+        h = F.tanh(self.dec_fc0(z))
         h = F.reshape(h, (z.shape[0], self.z_ch, self.z_size, self.z_size))
         h = self.dec_conv1(h)
         h = self.dec_conv2(h)
