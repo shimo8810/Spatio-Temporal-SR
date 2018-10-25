@@ -97,7 +97,7 @@ def main():
 
     updater = training.StandardUpdater(
         train_iter, optimizer,
-        device=args.gpu, loss_func=model.get_seq_loss_func(C1=args.coef1, C2=args.coef2))
+        device=args.gpu, loss_func=model.get_seq_loss_func(C1=args.coef1, C2=args.coef2, k=10))
 
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=str(out_path))
     trainer.extend(extensions.Evaluator(
