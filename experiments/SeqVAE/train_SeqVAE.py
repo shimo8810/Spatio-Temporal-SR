@@ -15,8 +15,7 @@ from chainer import training
 from chainer.training import extensions
 
 from net import SeqVAE
-from dataset import SeqCOILDataset
-
+from dataset import SeqCOILDataset, SeqMovingMNISTDataset
 
 #パス関連
 # このファイルの絶対パス
@@ -25,21 +24,14 @@ ROOT_PATH = FILE_PATH.parent.parent
 RESULT_PATH = ROOT_PATH.joinpath('results/SeqVAE')
 MODEL_PATH = ROOT_PATH.joinpath('models/SeqVAE')
 
-def save_reconstructed_images(x, x1, filename):
+def save_reconstructed_images(x, x1, filename, data_ch, data_size):
     fig, ax = plt.subplots(1, 2, figsize=(18, 9), dpi=100)
     for ai, x in zip(ax.flatten(), (x, x1)):
-        x = x.reshape(4, 4, 3, 128, 128).transpose(0, 3, 1, 4, 2).reshape(4 * 128, 4 * 128, 3)
+        x = x.reshape(4, 4, data_ch, data_size, data_size).transpose(0, 3, 1, 4, 2).reshape(4 * data_size, 4 * data_size, data_ch)
+        if data_ch == 1:
+            x = x.reshape(4 * data_size, 4 * data_size)
         x = np.clip(x * 255, 0, 255).astype(np.uint8)
         ai.imshow(x)
-    fig.savefig(str(filename))
-    plt.close()
-
-def save_sampled_images(x, filename):
-    x = x.reshape(4, 4,3, 128, 128).transpose(0, 3, 1, 4, 2).reshape(4 * 128, 4 * 128, 3)
-    x = np.clip(x * 255, 0, 255).astype(np.uint8)
-    fig = plt.figure(figsize=(9, 9), dpi=100)
-    ax = fig.add_subplot(1, 1, 1)
-    ax.imshow(x)
     fig.savefig(str(filename))
     plt.close()
 
@@ -55,10 +47,10 @@ def main():
                         help='number of epochs to learn')
     parser.add_argument('--batchsize', '-b', type=int, default=128,
                         help='learning minibatch size')
-    parser.add_argument('--aug', '-a', action='store_true', default=False,
-                        help='data aug.')
+    parser.add_argument('--dataset', '-d', type=str, choices=['coil', 'mmnist'], default='mmnist',
+                        help='using dataset')
     # Hyper Parameter
-    parser.add_argument('--dimz', '-z', default=200, type=int,
+    parser.add_argument('--latent', '-l', default=200, type=int,
                         help='dimention of encoded vector')
     parser.add_argument('--coef1', type=float, default=1.0,
                         help='')
@@ -68,6 +60,7 @@ def main():
                         help='')
     args = parser.parse_args()
 
+    print('Dataset: {}'.format(args.dataset))
     print('GPU: {}'.format(args.gpu))
     print('# dim z: {}'.format(args.dimz))
     print('# coef c1: {}'.format(args.coef1))
@@ -76,24 +69,34 @@ def main():
     print('# epoch: {}'.format(args.epoch))
     print('')
 
-    out_path = RESULT_PATH.joinpath('SeqVAE_latent{}_coef1{}_coef2{}_ch{}'.format(
-        args.dimz, args.coef1, args.coef2, args.ch))
+    out_path = RESULT_PATH.joinpath('{}/SeqVAE_latent{}_coef1{}_coef2{}_ch{}'.format(
+        args.dataset, args.dimz, args.coef1, args.coef2, args.ch))
     print("# result dir : {}".format(out_path))
     out_path.mkdir(parents=True, exist_ok=True)
 
-    model = SeqVAE(128, args.dimz, args.ch)
+    if args.dataset == 'coil':
+        data_ch = 3
+        data_size = 128
+    elif args.dataset == 'mmnist':
+        data_ch = 1
+        data_size = 64
+
+    model = SeqVAE(data_size, data_ch, args.latent, args.ch)
 
     optimizer = chainer.optimizers.Adam()
     optimizer.setup(model)
-    optimizer.add_hook(chainer.optimizer.GradientClipping(10.0))
     optimizer.add_hook(chainer.optimizer.WeightDecay(0.0001))
 
     # Load the Idol dataset
-    dataset = SeqCOILDataset(data_aug=args.aug)
-    test, train = chainer.datasets.split_dataset(dataset, 200)
+    if args.dataset == 'coil':
+        dataset = SeqCOILDataset()
+        test, train = chainer.datasets.split_dataset(dataset, 200)
+    elif args.dataset == 'mmnist':
+        test = SeqMovingMNISTDataset(dataset='test')
+        train = SeqMovingMNISTDataset(dataset='train')
 
     train_iter = chainer.iterators.SerialIterator(train, args.batchsize)
-    test_iter = chainer.iterators.SerialIterator(test, args.batchsize,repeat=False, shuffle=False)
+    test_iter = chainer.iterators.SerialIterator(test, args.batchsize, repeat=False, shuffle=False)
 
     updater = training.StandardUpdater(
         train_iter, optimizer,
@@ -128,21 +131,14 @@ def main():
         x = model.xp.array(train[:16])[:,0,:]
         with chainer.using_config('train', False), chainer.no_backprop_mode():
             x1 = model(x).data
-        save_reconstructed_images(chainer.cuda.to_cpu(x), chainer.cuda.to_cpu(x1),
-            out_path.joinpath('train_reconstructed_epoch_{}'.format(trainer.updater.epoch)))
+        save_reconstructed_images(model.xp.tonumpy(x), model.xp.tonumpy(x1),
+            out_path.joinpath('train_reconstructed_epoch_{}'.format(trainer.updater.epoch)), data_ch, data_size)
 
         x = model.xp.array(test[:16])[:,0,:]
         with chainer.using_config('train', False), chainer.no_backprop_mode():
             x1 = model(x).data
-        save_reconstructed_images(chainer.cuda.to_cpu(x), chainer.cuda.to_cpu(x1),
-            out_path.joinpath('test_reconstructed_epoch_{}'.format(trainer.updater.epoch)))
-
-        # draw images from randomly sampled z
-        z1, z2 = np.random.normal(0, 1, (2, args.dimz)).astype(np.float32)
-        z = z1 + np.kron(np.linspace(0, 1, 16).astype(np.float32).reshape(16, 1), (z2 - z1))
-        x = model.decode(model.xp.asarray(z)).data
-        save_sampled_images(chainer.cuda.to_cpu(x),
-            out_path.joinpath('sampled_epoch_{}'.format(trainer.updater.epoch)))
+        save_reconstructed_images(model.xp.tonumpy(x), model.xp.tonumpy(x1),
+            out_path.joinpath('test_reconstructed_epoch_{}'.format(trainer.updater.epoch)), data_ch, data_size)
 
     trainer.extend(reconstruct_and_sample)
 
