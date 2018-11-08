@@ -31,17 +31,10 @@ def save_reconstructed_images(x, x1, filename, data_ch, data_size):
     fig, ax = plt.subplots(1, 2, figsize=(18, 9), dpi=100)
     for ai, x in zip(ax.flatten(), (x, x1)):
         x = x.reshape(4, 4, data_ch, data_size, data_size).transpose(0, 3, 1, 4, 2).reshape(4 * data_size, 4 * data_size, data_ch)
+        if data_ch == 1:
+            x = x.reshape(4 * data_size, 4 * data_size)
         x = np.clip(x * 255, 0, 255).astype(np.uint8)
         ai.imshow(x)
-    fig.savefig(str(filename))
-    plt.close()
-
-def save_sampled_images(x, filename):
-    x = x.reshape(4, 4, 3, 128, 128).transpose(0, 3, 1, 4, 2).reshape(4 * 128, 4 * 128, 3)
-    x = np.clip(x * 255, 0, 255).astype(np.uint8)
-    fig = plt.figure(figsize=(9, 9), dpi=100)
-    ax = fig.add_subplot(1, 1, 1)
-    ax.imshow(x)
     fig.savefig(str(filename))
     plt.close()
 
@@ -92,7 +85,6 @@ def main():
 
     optimizer = chainer.optimizers.Adam()
     optimizer.setup(model)
-    optimizer.add_hook(chainer.optimizer.GradientClipping(10.0))
     optimizer.add_hook(chainer.optimizer.WeightDecay(0.0001))
 
     # Load the Idol dataset
@@ -150,9 +142,9 @@ def main():
     # Run the training
     trainer.run()
 
-    MODEL_PATH.mkdir(parents=True, exist_ok=True)
-    chainer.serializers.save_npz(
-        str(MODEL_PATH.joinpath('{}/preSeqVAE_latent{}_coef{}_ch{}.npz'.format(args.dataset, args.latent, args.coef, args.ch))), model)
+    model_save_path = MODEL_PATH.joinpath('{}/preSeqVAE_latent{}_coef{}_ch{}.npz'.format(args.dataset, args.latent, args.coef, args.ch))
+    model_save_path.mkdir(parents=True, exist_ok=True)
+    chainer.serializers.save_npz(str(model_save_path), model)
 
 
 if __name__ == '__main__':
