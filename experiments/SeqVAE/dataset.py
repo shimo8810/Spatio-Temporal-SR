@@ -10,6 +10,58 @@ FILE_PATH = Path(__file__).resolve().parent
 ROOT_PATH = FILE_PATH.parent.parent
 DATA_PATH = ROOT_PATH.joinpath('datasets')
 
+class MovingMNISTDataset(dataset_mixin.DatasetMixin):
+    """
+    Moving-MNISTのデータセット
+    データセットディレクトリに存在するmoving_mnist_(train|test).npyファイルは
+    元のmnist_test_seq.npyのデータを9:1に分けたデータ
+
+    (64, 64) height, widthの形状で出力される
+    """
+    def __init__(self, dataset='train'):
+        if dataset == 'train':
+            mmnist_path = DATA_PATH.joinpath('moving_mnist_train.npy')
+        elif dataset == 'test':
+            mmnist_path = DATA_PATH.joinpath('moving_mnist_test.npy')
+        else:
+            raise ValueError('dataset must be "train" or "test".')
+
+        self.data = np.load(mmnist_path) \
+                      .reshape(-1, 1, 64, 64).astype(np.float32) / 255.0
+
+    def __len__(self):
+        return len(self.data)
+
+    def get_example(self, i):
+        return self.data[i]
+
+class SeqMovingMNISTDataset(dataset_mixin.DatasetMixin):
+    """
+    Moving-MNISTのデータセットのSequenceデータ版
+    データセットディレクトリに存在するmoving_mnist_(train|test).npyファイルは
+    元のmnist_test_seq.npyのデータを9:1に分けたデータ
+
+    (3, 64, 64) frame, height, widthの形状で出力される
+    """
+    def __init__(self, dataset='train'):
+        if dataset == 'train':
+            mmnist_path = DATA_PATH.joinpath('moving_mnist_train.npy')
+        elif dataset == 'test':
+            mmnist_path = DATA_PATH.joinpath('moving_mnist_test.npy')
+        else:
+            raise ValueError('dataset must be "train" or "test".')
+
+        self.data = np.load(mmnist_path).astype(np.float32) / 255.0
+        print(self.data.max())
+
+    def __len__(self):
+        return len(self.data) * 18
+
+    def get_example(self, i):
+        seq_idx = i // 18
+        frm_idx = i %  18
+        return self.data[seq_idx, frm_idx:frm_idx+3]
+
 class COILDataset(dataset_mixin.DatasetMixin):
     def __init__(self):
         coil_path = DATA_PATH.joinpath('coil-100')
@@ -100,8 +152,4 @@ class SeqCOILDataset(dataset_mixin.DatasetMixin):
 
 
 if __name__ == '__main__':
-    dataset = SeqCOILDataset(data_aug=True)
-    print(len(dataset))
-    print(dataset.get_example(71).shape)
-    print(dataset.get_example(72).shape)
-    print(dataset.get_example(73).shape)
+    data = MovingMNISTDataset()
