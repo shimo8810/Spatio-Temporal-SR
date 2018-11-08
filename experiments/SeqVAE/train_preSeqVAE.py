@@ -8,9 +8,7 @@ if platform.system() == 'Linux':
     import matplotlib
     matplotlib.use('Agg')
 
-from tqdm import tqdm
 import numpy as np
-from skimage import io
 import matplotlib.pyplot as plt
 import chainer
 from chainer import training
