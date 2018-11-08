@@ -104,4 +104,5 @@ venv.bak/
 .mypy_cache/
 *.npz
 results/*
+datasets/
 !.gitkeep
