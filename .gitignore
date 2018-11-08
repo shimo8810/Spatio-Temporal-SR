@@ -105,5 +105,5 @@ venv.bak/
 *.npz
 results/*
 datasets/
-Pubs
+Pubs/
 !.gitkeep
