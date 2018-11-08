@@ -17,7 +17,7 @@ from chainer import training
 from chainer.training import extensions
 
 from net import SeqVAE
-from dataset import COILDataset
+from dataset import COILDataset, MovingMNISTDataset
 
 
 #パス関連
@@ -57,8 +57,10 @@ def main():
                         help='number of epochs to learn')
     parser.add_argument('--batchsize', '-b', type=int, default=128,
                         help='learning minibatch size')
+    parser.add_argument('--dataset', '-d', type=str, choices=['coil', 'mmnist'], default='mmnist',
+                        help='using dataset')
     # Hyper Parameter
-    parser.add_argument('--dimz', '-z', default=200, type=int,
+    parser.add_argument('--latent', '-l', default=200, type=int,
                         help='dimention of encoded vector')
     parser.add_argument('--coef', '-c', type=float, default=1.0,
                         help='')
@@ -66,18 +68,27 @@ def main():
                         help='')
     args = parser.parse_args()
 
+    print('Dataset: {}'.format(args.dataset))
     print('GPU: {}'.format(args.gpu))
-    print('# dim z: {}'.format(args.dimz))
+    print('# dim z: {}'.format(args.latent))
     print('# coef c: {}'.format(args.coef))
     print('# Minibatch-size: {}'.format(args.batchsize))
     print('# epoch: {}'.format(args.epoch))
     print('')
 
-    out_path = RESULT_PATH.joinpath('preSeqVAE_latent{}_coef{}_ch{}'.format(args.dimz, args.coef, args.ch))
+    out_path = RESULT_PATH.joinpath('{}/preSeqVAE_latent{}_coef{}_ch{}'.format(args.dataset, args.latent, args.coef, args.ch))
     print("# result dir : {}".format(out_path))
     out_path.mkdir(parents=True, exist_ok=True)
 
-    model = SeqVAE(128, args.dimz, args.ch)
+    # Load the Idol dataset
+    if args.dataset == 'coil':
+        data_ch = 3
+        data_size = 128
+    elif args.dataset == 'mmnist':
+        data_ch = 1
+        data_size = 64
+
+    model = SeqVAE(data_size, data_ch, args.latent, args.ch)
 
     optimizer = chainer.optimizers.Adam()
     optimizer.setup(model)
@@ -85,11 +96,15 @@ def main():
     optimizer.add_hook(chainer.optimizer.WeightDecay(0.0001))
 
     # Load the Idol dataset
-    dataset = COILDataset()
-    test, train = chainer.datasets.split_dataset(dataset, 200)
+    if args.dataset == 'coil':
+        dataset = COILDataset()
+        test, train = chainer.datasets.split_dataset(dataset, 200)
+    elif args.dataset == 'mmnist':
+        test = MovingMNISTDataset(dataset='test')
+        train = MovingMNISTDataset(dataset='train')
 
     train_iter = chainer.iterators.SerialIterator(train, args.batchsize)
-    test_iter = chainer.iterators.SerialIterator(test, args.batchsize,repeat=False, shuffle=False)
+    test_iter = chainer.iterators.SerialIterator(test, args.batchsize, repeat=False, shuffle=False)
 
     updater = training.StandardUpdater(
         train_iter, optimizer,
@@ -121,21 +136,14 @@ def main():
         x = model.xp.array(train[:16])
         with chainer.using_config('train', False), chainer.no_backprop_mode():
             x1 = model(x).data
-        save_reconstructed_images(chainer.cuda.to_cpu(x), chainer.cuda.to_cpu(x1),
+        save_reconstructed_images(model.xp.asnumpy(x), model.xp.asnumpy(x1),
             out_path.joinpath('train_reconstructed_epoch_{}'.format(trainer.updater.epoch)))
 
         x = model.xp.array(test[:16])
         with chainer.using_config('train', False), chainer.no_backprop_mode():
             x1 = model(x).data
-        save_reconstructed_images(chainer.cuda.to_cpu(x), chainer.cuda.to_cpu(x1),
+        save_reconstructed_images(model.xp.asnumpy(x), model.xp.asnumpy(x1),
             out_path.joinpath('test_reconstructed_epoch_{}'.format(trainer.updater.epoch)))
-
-        # draw images from randomly sampled z
-        z1, z2 = np.random.normal(0, 1, (2, args.dimz)).astype(np.float32)
-        z = z1 + np.kron(np.linspace(0, 1, 16).astype(np.float32).reshape(16, 1), (z2 - z1))
-        x = model.decode(model.xp.asarray(z)).data
-        save_sampled_images(chainer.cuda.to_cpu(x),
-            out_path.joinpath('sampled_epoch_{}'.format(trainer.updater.epoch)))
 
     trainer.extend(reconstruct_and_sample)
 
@@ -144,7 +152,7 @@ def main():
 
     MODEL_PATH.mkdir(parents=True, exist_ok=True)
     chainer.serializers.save_npz(
-        str(MODEL_PATH.joinpath('preSeqVAE_latent{}_coef{}_ch{}.npz'.format(args.dimz, args.coef, args.ch))), model)
+        str(MODEL_PATH.joinpath('{}/preSeqVAE_latent{}_coef{}_ch{}.npz'.format(args.dataset, args.latent, args.coef, args.ch))), model)
 
 
 if __name__ == '__main__':
