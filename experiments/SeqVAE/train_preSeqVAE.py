@@ -27,17 +27,17 @@ ROOT_PATH = FILE_PATH.parent.parent
 RESULT_PATH = ROOT_PATH.joinpath('results/SeqVAE')
 MODEL_PATH = ROOT_PATH.joinpath('models/SeqVAE')
 
-def save_reconstructed_images(x, x1, filename):
+def save_reconstructed_images(x, x1, filename, data_ch, data_size):
     fig, ax = plt.subplots(1, 2, figsize=(18, 9), dpi=100)
     for ai, x in zip(ax.flatten(), (x, x1)):
-        x = x.reshape(4, 4, 3, 128, 128).transpose(0, 3, 1, 4, 2).reshape(4 * 128, 4 * 128, 3)
+        x = x.reshape(4, 4, data_ch, data_size, data_size).transpose(0, 3, 1, 4, 2).reshape(4 * data_size, 4 * data_size, data_ch)
         x = np.clip(x * 255, 0, 255).astype(np.uint8)
         ai.imshow(x)
     fig.savefig(str(filename))
     plt.close()
 
 def save_sampled_images(x, filename):
-    x = x.reshape(4, 4,3, 128, 128).transpose(0, 3, 1, 4, 2).reshape(4 * 128, 4 * 128, 3)
+    x = x.reshape(4, 4, 3, 128, 128).transpose(0, 3, 1, 4, 2).reshape(4 * 128, 4 * 128, 3)
     x = np.clip(x * 255, 0, 255).astype(np.uint8)
     fig = plt.figure(figsize=(9, 9), dpi=100)
     ax = fig.add_subplot(1, 1, 1)
@@ -137,13 +137,13 @@ def main():
         with chainer.using_config('train', False), chainer.no_backprop_mode():
             x1 = model(x).data
         save_reconstructed_images(model.xp.asnumpy(x), model.xp.asnumpy(x1),
-            out_path.joinpath('train_reconstructed_epoch_{}'.format(trainer.updater.epoch)))
+            out_path.joinpath('train_reconstructed_epoch_{}'.format(trainer.updater.epoch)), data_ch, data_size)
 
         x = model.xp.array(test[:16])
         with chainer.using_config('train', False), chainer.no_backprop_mode():
             x1 = model(x).data
         save_reconstructed_images(model.xp.asnumpy(x), model.xp.asnumpy(x1),
-            out_path.joinpath('test_reconstructed_epoch_{}'.format(trainer.updater.epoch)))
+            out_path.joinpath('test_reconstructed_epoch_{}'.format(trainer.updater.epoch)), data_ch, data_size)
 
     trainer.extend(reconstruct_and_sample)
 
