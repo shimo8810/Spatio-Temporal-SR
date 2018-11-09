@@ -54,23 +54,26 @@ def main():
                         help='dimention of encoded vector')
     parser.add_argument('--coef1', type=float, default=1.0,
                         help='')
-    parser.add_argument('--coef2', type=float, default=2.0,
+    parser.add_argument('--coef2', type=float, default=1.0,
                         help='')
     parser.add_argument('--ch', type=int, default=4,
                         help='')
     args = parser.parse_args()
 
-    print('Dataset: {}'.format(args.dataset))
-    print('GPU: {}'.format(args.gpu))
-    print('# dim z: {}'.format(args.dimz))
-    print('# coef c1: {}'.format(args.coef1))
-    print('# coef c2: {}'.format(args.coef2))
+    print('### Learning Parameter ###')
+    print('# Dataset: {}'.format(args.dataset))
+    print('# GPU: {}'.format(args.gpu))
     print('# Minibatch-size: {}'.format(args.batchsize))
     print('# epoch: {}'.format(args.epoch))
+    print('### Model Parameter ###')
+    print('# dimension of latent z: {}'.format(args.latent))
+    print('# channel scale: {}'.format(args.ch))
+    print('# KL Loss coef: {}'.format(args.coef1))
+    print('# Seq Loss coef: {}'.format(args.coef2))
     print('')
 
-    out_path = RESULT_PATH.joinpath('{}/SeqVAE_latent{}_coef1{}_coef2{}_ch{}'.format(
-        args.dataset, args.dimz, args.coef1, args.coef2, args.ch))
+    out_path = RESULT_PATH.joinpath('{}/SeqVAE_latent{}_ch{}_coef1{}_coef2{}'.format(
+        args.dataset, args.latent, args.ch, args.coef1, args.coef2))
     print("# result dir : {}".format(out_path))
     out_path.mkdir(parents=True, exist_ok=True)
 
@@ -142,11 +145,18 @@ def main():
 
     trainer.extend(reconstruct_and_sample)
 
+    # generate sequence images
+    @chainer.training.make_extension()
+    def generate_sequence(trainer):
+        # generate sequence of train data
+        x = train[0]
+        with chainer.using_config('train', False), chainer.no_backprop_mode():
+            pass
     # Run the training
     trainer.run()
 
-    model_save_path = MODEL_PATH.joinpath('SeqVAE_latent{}_coef1{}_coef1{}_ch{}.npz'.format(
-            args.dimz, args.coef1, args.coef2, args.ch))
+    model_save_path = MODEL_PATH.joinpath('SeqVAE_latent{}_ch{}_coef1{}_coef1{}.npz'.format(
+            args.latent, args.ch, args.coef1, args.coef2))
     model_save_path.parent.mkdir(parents=True, exist_ok=True)
     chainer.serializers.save_npz(str(model_save_path), model)
 
