@@ -59,15 +59,18 @@ def main():
                         help='')
     args = parser.parse_args()
 
+    print('### Learning Parameter ###')
     print('Dataset: {}'.format(args.dataset))
     print('GPU: {}'.format(args.gpu))
-    print('# dim z: {}'.format(args.latent))
-    print('# coef c: {}'.format(args.coef))
     print('# Minibatch-size: {}'.format(args.batchsize))
     print('# epoch: {}'.format(args.epoch))
+    print('### Model Parameter ###')
+    print('# dimension of latent z: {}'.format(args.latent))
+    print('# channel scale: {}'.format(args.ch))
+    print('# KL loss coef.: {}'.format(args.coef))
     print('')
 
-    out_path = RESULT_PATH.joinpath('{}/preSeqVAE_latent{}_coef{}_ch{}'.format(args.dataset, args.latent, args.coef, args.ch))
+    out_path = RESULT_PATH.joinpath('{}/preSeqVAE_latent{}_ch{}_coef{}'.format(args.dataset, args.latent, args.ch, args.coef))
     print("# result dir : {}".format(out_path))
     out_path.mkdir(parents=True, exist_ok=True)
 
@@ -140,7 +143,8 @@ def main():
     # Run the training
     trainer.run()
 
-    model_save_path = MODEL_PATH.joinpath('{}/preSeqVAE_latent{}_coef{}_ch{}.npz'.format(args.dataset, args.latent, args.coef, args.ch))
+    model_save_path = MODEL_PATH.joinpath('{}/preSeqVAE_latent{}_ch{}_coef{}.npz'.format(
+        args.dataset, args.latent, args.ch, args.coef))
     model_save_path.parent.mkdir(parents=True, exist_ok=True)
     chainer.serializers.save_npz(str(model_save_path), model)
 
