@@ -145,11 +145,10 @@ def main():
     # Run the training
     trainer.run()
 
-    MODEL_PATH.mkdir(parents=True, exist_ok=True)
-    chainer.serializers.save_npz(
-        str(MODEL_PATH.joinpath('SeqVAE_latent{}_coef1{}_coef1{}_ch{}.npz'.format(
-            args.dimz, args.coef1, args.coef2, args.ch))), model)
-
+    model_save_path = MODEL_PATH.joinpath('SeqVAE_latent{}_coef1{}_coef1{}_ch{}.npz'.format(
+            args.dimz, args.coef1, args.coef2, args.ch))
+    model_save_path.parent.mkdir(parents=True, exist_ok=True)
+    chainer.serializers.save_npz(str(model_save_path), model)
 
 if __name__ == '__main__':
     main()
