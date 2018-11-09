@@ -51,8 +51,8 @@ class SeqMovingMNISTDataset(dataset_mixin.DatasetMixin):
         else:
             raise ValueError('dataset must be "train" or "test".')
 
-        self.data = np.load(mmnist_path).astype(np.float32) / 255.0
-        print(self.data.max())
+        self.data = np.load(mmnist_path) \
+                      .reshape(-1, 20, 1, 64, 64).astype(np.float32) / 255.0
 
     def __len__(self):
         return len(self.data) * 18
