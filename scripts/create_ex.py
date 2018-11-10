@@ -14,7 +14,7 @@ def main():
     entry point
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--name', '-n', type=str, help="name of experiment.")
+    parser.add_argument('--name', '-n', type=str, required=True, help="name of experiment.")
     args = parser.parse_args()
 
     os.mkdir(path.join(ROOT_PATH, 'experiments', args.name))
