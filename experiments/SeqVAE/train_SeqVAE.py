@@ -50,7 +50,7 @@ def main():
     parser.add_argument('--dataset', '-d', type=str, choices=['coil', 'mmnist'], default='mmnist',
                         help='using dataset')
     # Hyper Parameter
-    parser.add_argument('--latent', '-l', default=200, type=int,
+    parser.add_argument('--latent', '-l', default=100, type=int,
                         help='dimention of encoded vector')
     parser.add_argument('--coef1', type=float, default=1.0,
                         help='')
@@ -134,25 +134,18 @@ def main():
         x = model.xp.array(train[:16])[:,0,:]
         with chainer.using_config('train', False), chainer.no_backprop_mode():
             x1 = model(x).data
-        save_reconstructed_images(model.xp.tonumpy(x), model.xp.tonumpy(x1),
+        save_reconstructed_images(model.xp.asnumpy(x), model.xp.asnumpy(x1),
             out_path.joinpath('train_reconstructed_epoch_{}'.format(trainer.updater.epoch)), data_ch, data_size)
 
         x = model.xp.array(test[:16])[:,0,:]
         with chainer.using_config('train', False), chainer.no_backprop_mode():
             x1 = model(x).data
-        save_reconstructed_images(model.xp.tonumpy(x), model.xp.tonumpy(x1),
+        save_reconstructed_images(model.xp.asnumpy(x), model.xp.asnumpy(x1),
             out_path.joinpath('test_reconstructed_epoch_{}'.format(trainer.updater.epoch)), data_ch, data_size)
 
     trainer.extend(reconstruct_and_sample)
 
-    # generate sequence images
-    @chainer.training.make_extension()
-    def generate_sequence(trainer):
-        # generate sequence of train data
-        x = train[0]
-        with chainer.using_config('train', False), chainer.no_backprop_mode():
-            pass
-    # Run the training
+    # Run the training, and I will get a cup of tea.
     trainer.run()
 
     model_save_path = MODEL_PATH.joinpath('SeqVAE_latent{}_ch{}_coef1{}_coef1{}.npz'.format(
