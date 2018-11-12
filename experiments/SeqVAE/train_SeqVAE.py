@@ -54,7 +54,7 @@ def main():
                         help='dimention of encoded vector')
     parser.add_argument('--coef1', type=float, default=1.0,
                         help='')
-    parser.add_argument('--coef2', type=float, default=1.0,
+    parser.add_argument('--coef2', type=float, default=0.5,
                         help='')
     parser.add_argument('--ch', type=int, default=4,
                         help='')
