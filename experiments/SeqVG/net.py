@@ -103,23 +103,21 @@ class Decoder(chainer.Chain):
         return h
 
 class Discriminator(chainer.Chain):
-    def __init__(self):
+    def __init__(self, ch_scale):
         super(Discriminator, self).__init__()
         init_w = chainer.initializers.HeNormal()
         ch_scale = 8
 
         with self.init_scope():
-            self.conv0_0 = L.Convolution2D(None, ch_scale, 3, 1, 1, initialW=init_w)
-            self.conv0_1 = L.Convolution2D(None, ch_scale, 3, 1, 1, initialW=init_w)
-
-            self.conv1 = ConvBNR(ch_scale *  2, ch_scale *  4)
-            self.conv2 = ConvBNR(ch_scale *  4, ch_scale *  8)
-            self.conv3 = ConvBNR(ch_scale *  8, ch_scale * 16)
-            self.conv4 = ConvBNR(ch_scale * 16, ch_scale * 32)
+            self.conv0 = L.Convolution2D(None, ch_scale, 3, 1, 1, initialW=init_w)
+            self.conv1 = ConvBNR(ch_scale * 1, ch_scale * 2)
+            self.conv2 = ConvBNR(ch_scale * 2, ch_scale * 4)
+            self.conv3 = ConvBNR(ch_scale * 4, ch_scale * 8)
+            self.conv4 = ConvBNR(ch_scale * 8, ch_scale *16)
             self.conv5 = L.Convolution2D(None, 1, 3, 1, 1, initialW=init_w)
 
-    def forward(self, x_0, x_1):
-        h = F.concat([self.conv0_0(x_0), self.conv0_1(x_1)])
+    def forward(self, x):
+        h = F.leaky_relu(self.conv0(x))
         h = self.conv1(h)
         h = self.conv2(h)
         h = self.conv3(h)
