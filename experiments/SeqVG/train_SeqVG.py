@@ -96,7 +96,7 @@ def main():
     dis = Discriminator(args.ch)
 
     if args.gpu >= 0:
-        chainer.cuda.get_device(args.gpu).use()
+        chainer.backends.cuda.get_device_from_id(args.gpu).use()
         enc.to_gpu()
         dec.to_gpu()
         dis.to_gpu()
@@ -104,7 +104,7 @@ def main():
     def make_optimizer(model, alpha=0.0002, beta1=0.5):
         optimizer = chainer.optimizers.Adam(alpha, beta1)
         optimizer.setup(model)
-        optimizer.add_hook(chainer.optimizer.WeightDecay(10e-3))
+        optimizer.add_hook(chainer.optimizer.WeightDecay(10e-4))
         return optimizer
 
     opt_enc = make_optimizer(enc)
@@ -141,43 +141,23 @@ def main():
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=str(out_path))
     # trainer.extend(extensions.Evaluator(
     #     test_iter, model, device=args.gpu, eval_func=model.get_seq_loss_func(C1=args.coef1, C2=args.coef2, k=10)))
+    # trainer.extend(extensions.ExponentialShift("alpha", 0.1), trigger=(50, 'epoch'))
     trainer.extend(extensions.dump_graph('dec/loss'))
-    trainer.extend(extensions.snapshot(), trigger=(args.epoch, 'epoch'))
+    trainer.extend(extensions.snapshot(), trigger=(10, 'epoch'))
     trainer.extend(extensions.LogReport())
     trainer.extend(extensions.PrintReport(
         ['epoch', 'dec/loss', 'enc/loss', 'dis/loss', 'elapsed_time']))
 
-    # trainer.extend(extensions.PlotReport(['loss'],
-    #                           'epoch', file_name='loss.png'))
-    # trainer.extend(extensions.PlotReport(['seq'],
-    #                           'epoch', file_name='seq_loss.png'))
-    # trainer.extend(extensions.PlotReport(['rec'],
-    #                           'epoch', file_name='rec_loss.png'))
-    # trainer.extend(extensions.PlotReport(['kl'],
-    #                           'epoch', file_name='kl_loss.png'))
-    # trainer.extend(extensions.PlotReport(['gan'],
-    #                           'epoch', file_name='gan_loss.png'))
+    trainer.extend(extensions.PlotReport(['dec/loss'],
+                              'epoch', file_name='loss.png'))
+    trainer.extend(extensions.PlotReport(['enc/loss'],
+                              'epoch', file_name='seq_loss.png'))
+    trainer.extend(extensions.PlotReport(['dis/loss'],
+                              'epoch', file_name='rec_loss.png'))
     trainer.extend(extensions.ProgressBar())
 
     if args.resume:
         chainer.serializers.load_npz(args.resume, trainer)
-
-    #draw reconstructred image
-    # @chainer.training.make_extension(trigger=(10, 'epoch'))
-    # def reconstruct_and_sample(trainer):
-    #     x = model.xp.array(train[:16])[:,0,:]
-    #     with chainer.using_config('train', False), chainer.no_backprop_mode():
-    #         x1 = model(x).data
-    #     save_reconstructed_images(model.xp.asnumpy(x), model.xp.asnumpy(x1),
-    #         out_path.joinpath('train_reconstructed_epoch_{}'.format(trainer.updater.epoch)), data_ch, data_size)
-
-    #     x = model.xp.array(test[:16])[:,0,:]
-    #     with chainer.using_config('train', False), chainer.no_backprop_mode():
-    #         x1 = model(x).data
-    #     save_reconstructed_images(model.xp.asnumpy(x), model.xp.asnumpy(x1),
-    #         out_path.joinpath('test_reconstructed_epoch_{}'.format(trainer.updater.epoch)), data_ch, data_size)
-
-    # trainer.extend(reconstruct_and_sample)
 
     # Run the training, and I will get a cup of tea.
     trainer.run()
