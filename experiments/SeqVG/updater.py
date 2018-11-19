@@ -91,13 +91,13 @@ class SeqVGUpdater(chainer.training.StandardUpdater):
         z3 = F.gaussian(mu3, ln_var3)
         z2 = (z1 + z3) / 2
         # decode z -> x
-        x1_rec = dec(z1)
-        x2_rec = dec(z2)
-        x3_rec = dec(z3)
+        x1_rec = F.sigmoid(dec(z1))
+        x2_rec = F.sigmoid(dec(z2))
+        x3_rec = F.sigmoid(dec(z3))
         # disctiminate x -> y
-        y1_fake = F.sigmoid(dis(x1_rec))
-        y2_fake = F.sigmoid(dis(x2_rec))
-        y3_fake = F.sigmoid(dis(x3_rec))
+        y1_fake = dis(x1_rec)
+        y2_fake = dis(x2_rec)
+        y3_fake = dis(x3_rec)
         y1_real = dis(x1)
         y2_real = dis(x2)
         y3_real = dis(x3)
