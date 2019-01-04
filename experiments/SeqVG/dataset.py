@@ -4,7 +4,7 @@ from tqdm import tqdm
 from PIL import Image
 from chainer.dataset import dataset_mixin
 import numpy as np
-
+from chainercv import transforms
 # PATH 関連
 FILE_PATH = Path(__file__).resolve().parent
 ROOT_PATH = FILE_PATH.parent.parent
@@ -61,6 +61,57 @@ class SeqMovingMNISTDataset(dataset_mixin.DatasetMixin):
         seq_idx = i // 18
         frm_idx = i %  18
         return self.data[seq_idx, frm_idx:frm_idx+3]
+
+class SeqCOILDataset2(dataset_mixin.DatasetMixin):
+    def __init__(self, dataset='train'):
+        print("loading {}".format(dataset))
+
+        if dataset == 'train':
+            coil_path = DATA_PATH.joinpath('sequence_coil_100_train.npy')
+        elif dataset == 'test':
+            coil_path = DATA_PATH.joinpath('sequence_coil_100_test.npy')
+        else:
+            raise ValueError("'dataset' must be 'train' or 'test'.")
+
+        self.data = np.load(coil_path) \
+                      .transpose(0, 1, 4, 2, 3).astype(np.float32) / 255.0
+
+        self.num_obj, self.num_fr, _, _, _ = self.data.shape
+
+    def __len__(self):
+        return self.num_obj * self.num_fr
+
+    def get_example(self, i):
+        obj = i // self.num_fr
+        fr = i % self.num_fr
+        frs = [fr, (fr + 1) % self.num_fr, (fr + 2) % self.num_fr]
+        seq = self.data[obj, frs]
+        return self.argument(seq)
+
+    def argument(self, seq):
+        # pca lightning
+        eigen_value = np.array((0.2175, 0.0188, 0.0045))
+        eigen_vector = np.array((
+            (-0.5675, -0.5808, -0.5836),
+            (0.7192, -0.0045, -0.6948),
+            (0.4009, -0.814,  0.4203)))
+        alpha = np.random.normal(0, 0.25, size=3)
+        seq = seq.copy() + eigen_vector.dot(eigen_value * alpha) \
+                            .reshape((1, -1, 1, 1)).astype(np.float32)
+
+        # flip h
+        if random.choice([True, False]):
+            seq = np.flip(seq, 2)
+
+        # flip v
+        if random.choice([True, False]):
+            seq = np.flip(seq, 3)
+
+        # rot 90
+        if random.choice([True, False]):
+            seq = np.rot90(seq, axes=(2, 3))
+
+        return seq
 
 class COILDataset(dataset_mixin.DatasetMixin):
     def __init__(self):

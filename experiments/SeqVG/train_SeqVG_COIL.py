@@ -15,7 +15,7 @@ from chainer import training
 from chainer.training import extensions
 
 from net import Encoder, Decoder, Discriminator
-from dataset import SeqCOILDataset, SeqMovingMNISTDataset
+from dataset import SeqCOILDataset2, SeqMovingMNISTDataset
 from updater import SeqVGUpdater
 
 #パス関連
@@ -48,7 +48,7 @@ def main():
                         help='number of epochs to learn')
     parser.add_argument('--batchsize', '-b', type=int, default=128,
                         help='learning minibatch size')
-    parser.add_argument('--dataset', '-d', type=str, choices=['coil', 'mmnist'], default='mmnist',
+    parser.add_argument('--dataset', '-d', type=str, choices=['coil', 'mmnist'], default='coil',
                         help='using dataset')
     # Hyper Parameter
     parser.add_argument('--latent', '-l', default=100, type=int,
@@ -61,7 +61,7 @@ def main():
                         help='')
     parser.add_argument('--coef4', type=float, default=0.01,
                         help='')
-    parser.add_argument('--ch', type=int, default=4,
+    parser.add_argument('--ch', type=int, default=8,
                         help='')
     args = parser.parse_args()
 
@@ -86,7 +86,7 @@ def main():
 
     if args.dataset == 'coil':
         data_ch = 3
-        data_size = 128
+        data_size = 64
     elif args.dataset == 'mmnist':
         data_ch = 1
         data_size = 64
@@ -113,8 +113,8 @@ def main():
 
     # Load the Idol dataset
     if args.dataset == 'coil':
-        dataset = SeqCOILDataset()
-        test, train = chainer.datasets.split_dataset(dataset, 200)
+        test = SeqCOILDataset2(dataset='test')
+        train = SeqCOILDataset2(dataset='train')
     elif args.dataset == 'mmnist':
         test = SeqMovingMNISTDataset(dataset='test')
         train = SeqMovingMNISTDataset(dataset='train')
