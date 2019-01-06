@@ -107,3 +107,4 @@ results/*
 datasets/
 Pubs/
 !.gitkeep
+Notebooks/images/*
