@@ -79,8 +79,8 @@ def main():
     print('# adversal Loss coef: {}'.format(args.coef4))
     print('')
 
-    out_path = RESULT_PATH.joinpath('{}/SeqVG_latent{}_ch{}_coef1{}_coef2{}_coef3{}_coef4{}'.format(
-        args.dataset, args.latent, args.ch, args.coef1, args.coef2, args.coef3, args.coef4))
+    out_path = RESULT_PATH.joinpath('{}/SeqVG_epoch{}_latent{}_ch{}_coef1{}_coef2{}_coef3{}_coef4{}'.format(
+        args.dataset, args.epoch, args.latent, args.ch, args.coef1, args.coef2, args.coef3, args.coef4))
     print("# result dir : {}".format(out_path))
     out_path.mkdir(parents=True, exist_ok=True)
 

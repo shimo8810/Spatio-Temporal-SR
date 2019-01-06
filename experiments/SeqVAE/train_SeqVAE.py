@@ -72,8 +72,8 @@ def main():
     print('# Seq Loss coef: {}'.format(args.coef2))
     print('')
 
-    out_path = RESULT_PATH.joinpath('{}/SeqVAE_latent{}_ch{}_coef1{}_coef2{}'.format(
-        args.dataset, args.latent, args.ch, args.coef1, args.coef2))
+    out_path = RESULT_PATH.joinpath('{}/SeqVAE_epoch{}_latent{}_ch{}_coef1{}_coef2{}'.format(
+        args.dataset, args.epoch, args.latent, args.ch, args.coef1, args.coef2))
     print("# result dir : {}".format(out_path))
     out_path.mkdir(parents=True, exist_ok=True)
 
