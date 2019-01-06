@@ -1,5 +1,5 @@
 """
-train fi with SeqVAE-GAN
+train fi with vae
 """
 from pathlib import Path
 import argparse
@@ -14,16 +14,15 @@ import chainer
 from chainer import training
 from chainer.training import extensions
 
-from net import Encoder, Decoder, Discriminator
-from dataset import SeqCOILDataset2, SeqMovingMNISTDataset
-from updater import SeqVGUpdater
+from net import SeqVAE
+from dataset import SeqCOILDataset, SeqMovingMNISTDataset, SeqCOILDataset2
 
 #パス関連
 # このファイルの絶対パス
 FILE_PATH = Path(__file__).resolve().parent
 ROOT_PATH = FILE_PATH.parent.parent
-RESULT_PATH = ROOT_PATH.joinpath('results/SeqVG')
-MODEL_PATH = ROOT_PATH.joinpath('models/SeqVG')
+RESULT_PATH = ROOT_PATH.joinpath('results/SeqVAE')
+MODEL_PATH = ROOT_PATH.joinpath('models/SeqVAE')
 
 def save_reconstructed_images(x, x1, filename, data_ch, data_size):
     fig, ax = plt.subplots(1, 2, figsize=(18, 9), dpi=100)
@@ -44,7 +43,7 @@ def main():
                         help='Resume the optimization from snapshot')
     parser.add_argument('--gpu', '-g', default=0, type=int,
                         help='GPU ID (negative value indicates CPU)')
-    parser.add_argument('--epoch', '-e', default=100, type=int,
+    parser.add_argument('--epoch', '-e', default=200, type=int,
                         help='number of epochs to learn')
     parser.add_argument('--batchsize', '-b', type=int, default=128,
                         help='learning minibatch size')
@@ -55,11 +54,7 @@ def main():
                         help='dimention of encoded vector')
     parser.add_argument('--coef1', type=float, default=1.0,
                         help='')
-    parser.add_argument('--coef2', type=float, default=0.5,
-                        help='')
-    parser.add_argument('--coef3', type=float, default=1.0,
-                        help='')
-    parser.add_argument('--coef4', type=float, default=0.01,
+    parser.add_argument('--coef2', type=float, default=0.01,
                         help='')
     parser.add_argument('--ch', type=int, default=8,
                         help='')
@@ -73,13 +68,11 @@ def main():
     print('### Model Parameter ###')
     print('# dimension of latent z: {}'.format(args.latent))
     print('# channel scale: {}'.format(args.ch))
-    print('# reconstruction Loss coef: {}'.format(args.coef1))
-    print('# Sequence Loss coef: {}'.format(args.coef2))
-    print('# KL-divergence Loss coef: {}'.format(args.coef3))
-    print('# adversal Loss coef: {}'.format(args.coef4))
+    print('# KL Loss coef: {}'.format(args.coef1))
+    print('# Seq Loss coef: {}'.format(args.coef2))
     print('')
 
-    out_path = RESULT_PATH.joinpath('{}/SeqVG_latent{}_ch{}_coef1{}_coef2{}'.format(
+    out_path = RESULT_PATH.joinpath('{}/SeqVAE_latent{}_ch{}_coef1{}_coef2{}'.format(
         args.dataset, args.latent, args.ch, args.coef1, args.coef2))
     print("# result dir : {}".format(out_path))
     out_path.mkdir(parents=True, exist_ok=True)
@@ -91,25 +84,11 @@ def main():
         data_ch = 1
         data_size = 64
 
-    enc = Encoder(data_size, data_ch, args.latent, args.ch)
-    dec = Decoder(data_size, data_ch, args.latent, args.ch)
-    dis = Discriminator(args.ch)
+    model = SeqVAE(data_size, data_ch, args.latent, args.ch)
 
-    if args.gpu >= 0:
-        chainer.backends.cuda.get_device_from_id(args.gpu).use()
-        enc.to_gpu()
-        dec.to_gpu()
-        dis.to_gpu()
-
-    def make_optimizer(model, alpha=0.0002, beta1=0.5):
-        optimizer = chainer.optimizers.Adam(alpha, beta1)
-        optimizer.setup(model)
-        optimizer.add_hook(chainer.optimizer.WeightDecay(10e-4))
-        return optimizer
-
-    opt_enc = make_optimizer(enc)
-    opt_dec = make_optimizer(dec)
-    opt_dis = make_optimizer(dis)
+    optimizer = chainer.optimizers.Adam()
+    optimizer.setup(model)
+    optimizer.add_hook(chainer.optimizer.WeightDecay(0.0001))
 
     # Load the Idol dataset
     if args.dataset == 'coil':
@@ -122,60 +101,57 @@ def main():
     train_iter = chainer.iterators.SerialIterator(train, args.batchsize)
     test_iter = chainer.iterators.SerialIterator(test, args.batchsize, repeat=False, shuffle=False)
 
-    updater = SeqVGUpdater(
-        models=(enc, dec, dis),
-        iterator={
-            'main': train_iter,
-            'test': test_iter
-        },
-        optimizer={
-            'enc': opt_enc,
-            'dec': opt_dec,
-            'dis': opt_dis
-        },
-        K=1,
-        coefs=(args.coef1, args.coef2, args.coef3, args.coef4),
-        device=args.gpu
-    )
+    updater = training.StandardUpdater(
+        train_iter, optimizer,
+        device=args.gpu, loss_func=model.get_seq_loss_func(C1=args.coef1, C2=args.coef2))
 
     trainer = training.Trainer(updater, (args.epoch, 'epoch'), out=str(out_path))
-    # trainer.extend(extensions.Evaluator(
-    #     test_iter, model, device=args.gpu, eval_func=model.get_seq_loss_func(C1=args.coef1, C2=args.coef2, k=10)))
-    # trainer.extend(extensions.ExponentialShift("alpha", 0.1), trigger=(50, 'epoch'))
-    trainer.extend(extensions.dump_graph('dec/loss'))
-    trainer.extend(extensions.snapshot(), trigger=(10, 'epoch'))
+    trainer.extend(extensions.Evaluator(
+        test_iter, model, device=args.gpu, eval_func=model.get_seq_loss_func(C1=args.coef1, C2=args.coef2, k=10)))
+    trainer.extend(extensions.dump_graph('main/loss'))
+    trainer.extend(extensions.snapshot(), trigger=(20, 'epoch'))
     trainer.extend(extensions.LogReport())
     trainer.extend(extensions.PrintReport(
-        ['epoch', 'dec/loss', 'enc/loss', 'dis/loss', 'elapsed_time']))
+        ['epoch', 'main/rec_loss', 'validation/main/rec_loss',
+        'main/seq_loss', 'validation/main/seq_loss', 'main/kl_loss', 'validation/main/kl_loss', 'elapsed_time']))
 
-    trainer.extend(extensions.PlotReport(['dec/loss'],
-                              'epoch', file_name='dec_loss.png'))
-    trainer.extend(extensions.PlotReport(['enc/loss'],
-                              'epoch', file_name='enc_loss.png'))
-    trainer.extend(extensions.PlotReport(['dis/loss'],
-                              'epoch', file_name='dis_loss.png'))
+    trainer.extend(extensions.PlotReport(['main/loss', 'validation/main/loss'],
+                              'epoch', file_name='loss.png'))
+    trainer.extend(extensions.PlotReport(['main/seq_loss', 'validation/main/seq_loss'],
+                              'epoch', file_name='seq_loss.png'))
+    trainer.extend(extensions.PlotReport(['main/loss', 'validation/main/rec_loss'],
+                              'epoch', file_name='rec_loss.png'))
+    trainer.extend(extensions.PlotReport(['main/kl_loss', 'validation/main/kl_loss'],
+                              'epoch', file_name='kl_loss.png'))
     trainer.extend(extensions.ProgressBar())
 
     if args.resume:
         chainer.serializers.load_npz(args.resume, trainer)
 
+    #draw reconstructred image
+    @chainer.training.make_extension(trigger=(10, 'epoch'))
+    def reconstruct_and_sample(trainer):
+        x = model.xp.array(train[:16])[:,0,:]
+        with chainer.using_config('train', False), chainer.no_backprop_mode():
+            x1 = model(x).data
+        save_reconstructed_images(model.xp.asnumpy(x), model.xp.asnumpy(x1),
+            out_path.joinpath('train_reconstructed_epoch_{}'.format(trainer.updater.epoch)), data_ch, data_size)
+
+        x = model.xp.array(test[:16])[:,0,:]
+        with chainer.using_config('train', False), chainer.no_backprop_mode():
+            x1 = model(x).data
+        save_reconstructed_images(model.xp.asnumpy(x), model.xp.asnumpy(x1),
+            out_path.joinpath('test_reconstructed_epoch_{}'.format(trainer.updater.epoch)), data_ch, data_size)
+
+    trainer.extend(reconstruct_and_sample)
+
     # Run the training, and I will get a cup of tea.
     trainer.run()
 
-    model_save_path = MODEL_PATH.joinpath(args.dataset, 'Decoder_SeqVG_latent{}_ch{}_coef1{}_coef1{}.npz'.format(
+    model_save_path = MODEL_PATH.joinpath(args.dataset, 'SeqVAE_latent{}_ch{}_coef1{}_coef1{}.npz'.format(
             args.latent, args.ch, args.coef1, args.coef2))
     model_save_path.parent.mkdir(parents=True, exist_ok=True)
-    chainer.serializers.save_npz(str(model_save_path), dec)
-
-    model_save_path = MODEL_PATH.joinpath('args.dataset, Encoder_SeqVG_latent{}_ch{}_coef1{}_coef1{}.npz'.format(
-            args.latent, args.ch, args.coef1, args.coef2))
-    model_save_path.parent.mkdir(parents=True, exist_ok=True)
-    chainer.serializers.save_npz(str(model_save_path), enc)
-
-    model_save_path = MODEL_PATH.joinpath('args.dataset, Discriminater_SeqVG_latent{}_ch{}_coef1{}_coef1{}.npz'.format(
-            args.latent, args.ch, args.coef1, args.coef2))
-    model_save_path.parent.mkdir(parents=True, exist_ok=True)
-    chainer.serializers.save_npz(str(model_save_path), dis)
+    chainer.serializers.save_npz(str(model_save_path), model)
 
 if __name__ == '__main__':
     main()
