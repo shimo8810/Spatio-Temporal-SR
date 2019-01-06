@@ -79,7 +79,7 @@ def main():
 
     if args.dataset == 'coil':
         data_ch = 3
-        data_size = 128
+        data_size = 64
     elif args.dataset == 'mmnist':
         data_ch = 1
         data_size = 64
