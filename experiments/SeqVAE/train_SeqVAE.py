@@ -15,7 +15,7 @@ from chainer import training
 from chainer.training import extensions
 
 from net import SeqVAE
-from dataset import SeqCOILDataset, SeqMovingMNISTDataset
+from dataset import SeqCOILDataset, SeqMovingMNISTDataset, SeqCOILDataset2
 
 #パス関連
 # このファイルの絶対パス
@@ -92,8 +92,8 @@ def main():
 
     # Load the Idol dataset
     if args.dataset == 'coil':
-        dataset = SeqCOILDataset()
-        test, train = chainer.datasets.split_dataset(dataset, 200)
+        test = SeqCOILDataset2(dataset='test')
+        train = SeqCOILDataset2(dataset='train')
     elif args.dataset == 'mmnist':
         test = SeqMovingMNISTDataset(dataset='test')
         train = SeqMovingMNISTDataset(dataset='train')
