@@ -95,9 +95,9 @@ class SeqVGUpdater(chainer.training.StandardUpdater):
         x2_rec = dec(z2)
         x3_rec = dec(z3)
         # disctiminate x -> y
-        y1_fake = dis(x1_rec)
-        y2_fake = dis(x2_rec)
-        y3_fake = dis(x3_rec)
+        y1_fake = dis(F.sigmoid(x1_rec))
+        y2_fake = dis(F.sigmoid(x2_rec))
+        y3_fake = dis(F.sigmoid(x3_rec))
         y1_real = dis(x1)
         y2_real = dis(x2)
         y3_real = dis(x3)
