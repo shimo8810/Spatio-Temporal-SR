@@ -148,8 +148,8 @@ def main():
     # Run the training, and I will get a cup of tea.
     trainer.run()
 
-    model_save_path = MODEL_PATH.joinpath(args.dataset, 'SeqVAE_latent{}_ch{}_coef1{}_coef1{}.npz'.format(
-            args.latent, args.ch, args.coef1, args.coef2))
+    model_save_path = MODEL_PATH.joinpath(args.dataset, 'SeqVAE_epoch{}_latent{}_ch{}_coef1{}_coef1{}.npz'.format(
+            args.epoch, args.latent, args.ch, args.coef1, args.coef2))
     print(model_save_path)
     model_save_path.parent.mkdir(parents=True, exist_ok=True)
     chainer.serializers.save_npz(str(model_save_path), model)
