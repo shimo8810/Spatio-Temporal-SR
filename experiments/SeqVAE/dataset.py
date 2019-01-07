@@ -5,6 +5,7 @@ from PIL import Image
 from chainer.dataset import dataset_mixin
 import numpy as np
 
+from chainercv import transforms
 # PATH 関連
 FILE_PATH = Path(__file__).resolve().parent
 ROOT_PATH = FILE_PATH.parent.parent
@@ -112,6 +113,38 @@ class SeqCOILDataset2(dataset_mixin.DatasetMixin):
             seq = np.rot90(seq, axes=(2, 3))
 
         return seq
+
+class COILDataset2(dataset_mixin.DatasetMixin):
+    def __init__(self, dataset='train'):
+        print("loading {}".format(dataset))
+
+        if dataset == 'train':
+            coil_path = DATA_PATH.joinpath('sequence_coil_100_train.npy')
+        elif dataset == 'test':
+            coil_path = DATA_PATH.joinpath('sequence_coil_100_test.npy')
+        else:
+            raise ValueError("'dataset' must be 'train' or 'test'.")
+
+        self.data = np.load(coil_path) \
+            .transpose(0, 1, 4, 2, 3).reshape(-1, 3, 64, 64).astype(np.float32) / 255.0
+
+    def __len__(self):
+        return len(self.data)
+
+    def get_example(self, i):
+        return self.argument(self.data[i])
+
+    def argument(self, img):
+        # pca lightning
+        img = transforms.pca_lighting(img, sigma=0.1)
+
+        # flip h
+        img = transforms.random_flip(img, y_random=True, x_random=True)
+
+        # rot 90
+        img = transforms.random_rotate(img)
+
+        return img
 
 class COILDataset(dataset_mixin.DatasetMixin):
     def __init__(self):

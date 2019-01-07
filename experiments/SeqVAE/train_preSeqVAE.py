@@ -15,7 +15,7 @@ from chainer import training
 from chainer.training import extensions
 
 from net import SeqVAE
-from dataset import COILDataset, MovingMNISTDataset
+from dataset import COILDataset, MovingMNISTDataset, COILDataset2
 
 
 #パス関連
@@ -70,14 +70,15 @@ def main():
     print('# KL loss coef.: {}'.format(args.coef))
     print('')
 
-    out_path = RESULT_PATH.joinpath('{}/preSeqVAE_latent{}_ch{}_coef{}'.format(args.dataset, args.latent, args.ch, args.coef))
+    out_path = RESULT_PATH.joinpath('{}/preSeqVAE_epoch{}_latent{}_ch{}_coef{}'.format(
+        args.dataset, args.epoch, args.latent, args.ch, args.coef))
     print("# result dir : {}".format(out_path))
     out_path.mkdir(parents=True, exist_ok=True)
 
     # Load the Idol dataset
     if args.dataset == 'coil':
         data_ch = 3
-        data_size = 128
+        data_size = 64
     elif args.dataset == 'mmnist':
         data_ch = 1
         data_size = 64
@@ -90,8 +91,8 @@ def main():
 
     # Load the Idol dataset
     if args.dataset == 'coil':
-        dataset = COILDataset()
-        test, train = chainer.datasets.split_dataset(dataset, 200)
+        test = COILDataset2(dataset='test')
+        train = COILDataset2(dataset='train')
     elif args.dataset == 'mmnist':
         test = MovingMNISTDataset(dataset='test')
         train = MovingMNISTDataset(dataset='train')
@@ -143,8 +144,8 @@ def main():
     # Run the training
     trainer.run()
 
-    model_save_path = MODEL_PATH.joinpath('{}/preSeqVAE_latent{}_ch{}_coef{}.npz'.format(
-        args.dataset, args.latent, args.ch, args.coef))
+    model_save_path = MODEL_PATH.joinpath('{}/preSeqVAE_epoch{}_latent{}_ch{}_coef{}.npz'.format(
+        args.dataset, args.epoch, args.latent, args.ch, args.coef))
     model_save_path.parent.mkdir(parents=True, exist_ok=True)
     chainer.serializers.save_npz(str(model_save_path), model)
 
