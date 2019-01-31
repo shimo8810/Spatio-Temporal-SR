@@ -54,10 +54,10 @@ class Encoder(chainer.Chain):
 
         with self.init_scope():
             self.conv0 = L.Convolution2D(None, ch_scale, 3, 1, 1, initialW=init_w)
-            self.conv1 = ConvBNR(ch_scale * 1, ch_scale *  2)
-            self.conv2 = ConvBNR(ch_scale * 2, ch_scale *  4)
-            self.conv3 = ConvBNR(ch_scale * 4, ch_scale *  8)
-            self.conv4 = ConvBNR(ch_scale * 8, ch_scale * 16)
+            self.conv1 = ConvBNR(ch_scale * 1, ch_scale *  2)# 32-64 -> 64-32
+            self.conv2 = ConvBNR(ch_scale * 2, ch_scale *  4)# 64-32 -> 128-16
+            self.conv3 = ConvBNR(ch_scale * 4, ch_scale *  8)# 128-16 -> 256-8
+            self.conv4 = ConvBNR(ch_scale * 8, ch_scale * 16)# 256-8 -> 512-4
             self.fc5_mu = L.Linear(self.n_flat, n_latent)
             self.fc5_ln_var = L.Linear(self.n_flat, n_latent)
 
@@ -67,6 +67,7 @@ class Encoder(chainer.Chain):
         h = self.conv2(h)
         h = self.conv3(h)
         h = self.conv4(h)
+        print("flatshape:", h.shape, self.z_size, self.z_ch)
         mu = self.fc5_mu(h)
         ln_var = self.fc5_ln_var(h)
         return mu, ln_var
@@ -95,6 +96,7 @@ class Decoder(chainer.Chain):
     def forward(self, z):
         h = F.tanh(self.fc0(z))
         h = F.reshape(h, (z.shape[0], self.z_ch, self.z_size, self.z_size))
+        print("dec flat shape:", h.shape)
         h = self.conv1(h)
         h = self.conv2(h)
         h = self.conv3(h)

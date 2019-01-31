@@ -59,7 +59,7 @@ def main():
 
     day = datetime.datetime.today()
     print('### Learning Parameter ###')
-    print('# Time:'. day)
+    print('# Time:', day)
     print('# Dataset: {}'.format(args.dataset))
     print('# GPU: {}'.format(args.gpu))
     print('# Minibatch-size: {}'.format(args.batchsize))
