@@ -67,7 +67,6 @@ class Encoder(chainer.Chain):
         h = self.conv2(h)
         h = self.conv3(h)
         h = self.conv4(h)
-        print("flatshape:", h.shape, self.z_size, self.z_ch)
         mu = self.fc5_mu(h)
         ln_var = self.fc5_ln_var(h)
         return mu, ln_var
@@ -96,7 +95,6 @@ class Decoder(chainer.Chain):
     def forward(self, z):
         h = F.tanh(self.fc0(z))
         h = F.reshape(h, (z.shape[0], self.z_ch, self.z_size, self.z_size))
-        print("dec flat shape:", h.shape)
         h = self.conv1(h)
         h = self.conv2(h)
         h = self.conv3(h)
